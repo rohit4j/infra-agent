@@ -19,6 +19,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+hackathon-py-env/
 
 # Virtual Environment
 venv/
