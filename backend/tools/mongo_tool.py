@@ -160,16 +160,7 @@ class MongoDBTool:
 
 
 def get_mongo_tool() -> Tool:
-    """
-    Create and return a MongoDB Tool for use with LangGraph.
-
-    The tool:
-      - Maintains session context using a single JavaScript block.
-      - Converts old shell commands (use <db>, show dbs, show collections, etc.)
-        into valid JavaScript for mongosh.
-      - Instructs the LLM to write commands with semicolons, but it will handle
-        rewriting them if needed.
-    """
+    """Create and return a MongoDB Tool for use with LangGraph."""
     logger.info("Creating MongoDB Tool")
     try:
         tool_obj = MongoDBTool()
@@ -178,16 +169,21 @@ def get_mongo_tool() -> Tool:
             func=tool_obj.execute_command,
             description=(
                 "Execute MongoDB shell (mongosh) commands in a single, persistent session.\n\n"
-                "1. Provide a full chain of commands since the start.\n"
-                "2. If you use old shell syntax, e.g. 'use mydb;' or 'show collections;', "
-                "the tool automatically converts them.\n"
-                "3. Always end each command with a semicolon.\n"
-                "4. Each command's output will be paired with its input.\n\n"
-                "Examples:\n"
-                "- use my_database;\n"
-                "- show dbs;\n"
-                "- show collections;\n"
-                "- db.users.find();\n"
+                "IMPORTANT RULES:\n"
+                "1. ALWAYS include 'use database_name;' before ANY query, even if you used it before\n"
+                "2. Commands must be in sequence with semicolons, e.g.:\n"
+                "   use login_tracker; db.users.find();\n"
+                "3. Never assume database context is maintained between calls\n"
+                "4. Each command's output will be paired with its input\n\n"
+                "Examples of CORRECT command sequences:\n"
+                "- 'use login_tracker; db.users.find();'\n"
+                "- 'use mydatabase; show collections;'\n"
+                "- 'show dbs;' (only for listing databases)\n\n"
+                "Examples of INCORRECT command sequences:\n"
+                "- 'db.users.find();' (missing database context)\n"
+                "- 'show collections;' (missing database context)\n\n"
+                "IF DB and COLLECTION NAME CONTEXT IS NOT AVAILABLE THEN ALWAYS FIRST CHECK ALL DBS and collections available before running any commands\n"
+                "AND EVERY FRESH CALL TO THIS TOOL MUST INCLUDE 'use database_name;' BEFORE ANY QUERY"
             )
         )
         logger.info("Successfully created MongoDB Tool")
