@@ -40,8 +40,9 @@ This project implements an AI-powered chatbot that can help manage various infra
 │       ├── k8s_tool.py
 │       ├── mongo_tool.py
 │       └── ...
-├── streamlit_app.py           # Streamlit UI implementation
-├── requirements.txt           # Python dependencies
+├── frontend/ 
+│   └── streamlit_app.py      # Streamlit UI implementation
+├── requirements.txt          # Python dependencies
 └── .env.example              # Example environment variables
 ```
 
