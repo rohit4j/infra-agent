@@ -144,6 +144,121 @@ Before setting up the project, you need:
    sudo apt install -y rabbitmq-server
    ```
 
+### Setting up Redis
+1. Pull the Redis image:
+```bash
+docker pull redis:latest
+```
+2. Run Redis container:
+```bash
+docker run --name redis-container -d -p 6379:6379 redis:latest
+```
+3. Verify the container is running:
+```bash
+docker ps
+# Should see 'redis-container' in the list
+```
+4. Test connection using redis-cli:
+```bash
+redis-cli -h localhost -p 6379
+# Type 'ping' to test connection, should return 'PONG'
+```
+5. The default connection string will be:
+```
+redis://localhost:6379
+```
+
+### Setting up Kong API Gateway
+1. Create a Docker network for Kong:
+```bash
+docker network create kong-net
+```
+
+2. Set up PostgreSQL for Kong:
+```bash
+docker run -d --name kong-database \
+  --network=kong-net \
+  -p 5432:5432 \
+  -e POSTGRES_USER=kong \
+  -e POSTGRES_DB=kong \
+  -e POSTGRES_PASSWORD=kongpass \
+  postgres:13
+```
+
+3. Prepare the Kong database:
+```bash
+docker run --rm --network=kong-net \
+  -e KONG_DATABASE=postgres \
+  -e KONG_PG_HOST=kong-database \
+  -e KONG_PG_USER=kong \
+  -e KONG_PG_PASSWORD=kongpass \
+  kong:latest kong migrations bootstrap
+```
+
+4. Start Kong:
+```bash
+docker run -d --name kong \
+  --network=kong-net \
+  -e KONG_DATABASE=postgres \
+  -e KONG_PG_HOST=kong-database \
+  -e KONG_PG_USER=kong \
+  -e KONG_PG_PASSWORD=kongpass \
+  -e KONG_PROXY_ACCESS_LOG=/dev/stdout \
+  -e KONG_ADMIN_ACCESS_LOG=/dev/stdout \
+  -e KONG_PROXY_ERROR_LOG=/dev/stderr \
+  -e KONG_ADMIN_ERROR_LOG=/dev/stderr \
+  -e KONG_ADMIN_LISTEN="0.0.0.0:8001, 0.0.0.0:8444 ssl" \
+  -p 8000:8000 \
+  -p 8443:8443 \
+  -p 8001:8001 \
+  -p 8444:8444 \
+  kong:latest
+```
+
+5. Verify Kong is running:
+```bash
+curl -i http://localhost:8001/
+```
+
+6. Default ports:
+- Proxy: 8000 (HTTP), 8443 (HTTPS)
+- Admin API: 8001 (HTTP), 8444 (HTTPS)
+
+### Setting up RabbitMQ
+1. Pull the RabbitMQ image with management console:
+```bash
+docker pull rabbitmq:3-management
+```
+
+2. Run RabbitMQ container:
+```bash
+docker run -d --name rabbitmq-container \
+  -p 5672:5672 \
+  -p 15672:15672 \
+  -e RABBITMQ_DEFAULT_USER=admin \
+  -e RABBITMQ_DEFAULT_PASS=adminpass \
+  rabbitmq:3-management
+```
+
+3. Verify the container is running:
+```bash
+docker ps
+# Should see 'rabbitmq-container' in the list
+```
+
+4. Access points:
+- AMQP port: 5672
+- Management UI: http://localhost:15672
+  - Username: admin
+  - Password: adminpass
+
+5. The default connection string will be:
+```
+amqp://admin:adminpass@localhost:5672/
+```
+
+### Project Setup
+
 ## Understanding Key Components
 
 ### 1. Orchestration Agent (backend/orchestration_agent.py)

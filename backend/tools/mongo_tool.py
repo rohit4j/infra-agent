@@ -88,6 +88,12 @@ class MongoDBTool:
           - commands are converted from shell style to JavaScript
           - outputs are separated by delimiters to pair each command with its output
         """
+        logger.info("=" * 80)
+        logger.info("MONGODB COMMAND FROM LLM:")
+        logger.info("-" * 40)
+        logger.info(commands)
+        logger.info("-" * 40)
+
         logger.info(f"Received commands: {commands}")
 
         # Split incoming commands by ';' and filter out empty items
@@ -118,7 +124,7 @@ class MongoDBTool:
                 text=True,
                 check=True
             )
-
+            
             raw_output = result.stdout.strip()
             logger.debug(f"Raw mongosh output: {raw_output}")
 
@@ -146,16 +152,31 @@ class MongoDBTool:
                 outputs.append(f"{current_command}\nOutput:\n{''.join(current_output)}")
 
             final_output = "\n\n".join(outputs)
+            logger.info("MONGODB RESPONSE TO LLM:")
+            logger.info("-" * 40)
+            logger.info(final_output)
+            logger.info("-" * 40)
+            logger.info("=" * 80)
             logger.info(f"Commands output: {final_output}")
             return final_output
-
+            
         except subprocess.CalledProcessError as e:
             error_msg = f"Error: {e.stderr.strip() if e.stderr else str(e)}"
             logger.error(error_msg)
+            logger.info("MONGODB ERROR RESPONSE TO LLM:")
+            logger.info("-" * 40)
+            logger.info(f"Error occurred during execution:\n{error_msg}")
+            logger.info("-" * 40)
+            logger.info("=" * 80)
             return f"Error occurred during execution:\n{error_msg}"
         except Exception as e:
             error_msg = f"General Error: {str(e)}"
             logger.error(error_msg)
+            logger.info("MONGODB ERROR RESPONSE TO LLM:")
+            logger.info("-" * 40)
+            logger.info(f"Error occurred during execution:\n{error_msg}")
+            logger.info("-" * 40)
+            logger.info("=" * 80)
             return f"Error occurred during execution:\n{error_msg}"
 
 

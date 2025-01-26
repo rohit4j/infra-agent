@@ -4,8 +4,56 @@ import shutil
 import os
 from langchain.agents import Tool
 import logging
+from dotenv import load_dotenv
 
+# Configure logging with more detailed format
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('tools.log')
+    ]
+)
+
+# Get logger for this module
 logger = logging.getLogger(__name__)
+
+def log_tool_interaction(func):
+    """Decorator to log tool interactions with LLM."""
+    def wrapper(*args, **kwargs):
+        # Extract the command from args (first argument after self)
+        command = args[1] if len(args) > 1 else kwargs.get('command', '')
+        
+        # Log input
+        logger.info("=" * 80)
+        logger.info("TOOL: AWS CLI")
+        logger.info("INPUT FROM LLM:")
+        logger.info("-" * 40)
+        logger.info(f"Command: {command}")
+        logger.info("-" * 40)
+        
+        # Execute the function
+        try:
+            result = func(*args, **kwargs)
+            
+            # Log output
+            logger.info("OUTPUT TO LLM:")
+            logger.info("-" * 40)
+            logger.info(result)
+            logger.info("-" * 40)
+            logger.info("=" * 80)
+            
+            return result
+        except Exception as e:
+            logger.error("ERROR IN TOOL EXECUTION:")
+            logger.error("-" * 40)
+            logger.error(str(e))
+            logger.error("-" * 40)
+            logger.info("=" * 80)
+            raise
+    
+    return wrapper
 
 class AWSServicesTool:
     def __init__(self):
@@ -50,68 +98,62 @@ class AWSServicesTool:
 
     def execute_command(self, command: str) -> str:
         """Execute an AWS CLI command and return the output."""
+        logger.info("=" * 80)
+        logger.info("AWS CLI COMMAND INPUT:")
+        logger.info("-" * 40)
+        logger.info(command)
+        logger.info("-" * 40)
+        
         try:
-            # Log the command being executed
-            logger.info(f"Executing AWS command: {command}")
-            logger.info(f"Using AWS CLI path: {self.aws_path}")
-            
-            # Split command into parts and remove 'aws' if present
+            # Split the command into parts and remove 'aws' if present
             cmd_parts = command.split()
-            if cmd_parts[0] == 'aws':
-                cmd_parts = cmd_parts[1:]
-            
-            # Construct command list - this works consistently across all OS
-            full_command = [self.aws_path] + cmd_parts
-            logger.info(f"Full command: {full_command}")
+            if cmd_parts[0].lower() == 'aws':
+                cmd_parts = cmd_parts[1:]  # Remove the 'aws' prefix
             
             # Execute command
             result = subprocess.run(
-                full_command,
+                [self.aws_path] + cmd_parts,
                 capture_output=True,
                 text=True,
                 check=True,
-                shell=False,
                 cwd=self.home
             )
             
-            # Log the output
-            logger.info(f"Command stdout: {result.stdout[:200]}...")
+            # Log and return the output
+            logger.info("AWS CLI COMMAND OUTPUT:")
+            logger.info("-" * 40)
+            logger.info(result.stdout.strip())
+            logger.info("-" * 40)
+            logger.info("=" * 80)
             
-            # Return the output directly
             return result.stdout.strip()
             
         except subprocess.CalledProcessError as e:
-            logger.error(f"AWS CLI error: {e.stderr}")
-            return f"Error: AWS CLI command failed: {e.stderr}"
+            error_msg = f"Error executing AWS CLI command: {e.stderr}"
+            logger.error("AWS CLI ERROR OUTPUT:")
+            logger.error("-" * 40)
+            logger.error(error_msg)
+            logger.error("-" * 40)
+            logger.info("=" * 80)
+            return error_msg
         except Exception as e:
-            logger.error(f"Unexpected error: {str(e)}")
-            return f"Error: Unexpected error occurred: {str(e)}"
+            error_msg = f"Unexpected error: {str(e)}"
+            logger.error("AWS CLI ERROR OUTPUT:")
+            logger.error("-" * 40)
+            logger.error(error_msg)
+            logger.error("-" * 40)
+            logger.info("=" * 80)
+            return error_msg
 
 def get_aws_tool() -> Tool:
-    """Create and return an AWS Services Tool for use with LangChain."""
+    """Create and return an AWS CLI Tool for use with LangGraph."""
     logger.info("Creating AWS Services Tool")
     try:
         tool = AWSServicesTool()
         aws_tool = Tool(
-            name="AWS Services Tool",
+            name="AWS CLI Tool",
             func=tool.execute_command,
-            description="""Use this tool to manage AWS services and resources. This tool executes AWS CLI commands.
-            
-            Common AWS CLI commands:
-            - VPC commands:
-              * aws ec2 describe-vpcs
-              * aws ec2 describe-vpc-endpoints
-            - EC2 commands:
-              * aws ec2 describe-instances
-              * aws ec2 describe-security-groups
-            - S3 commands:
-              * aws s3 ls
-              * aws s3 ls s3://[bucket-name]
-            - EKS commands:
-              * aws eks list-clusters
-              * aws eks describe-cluster --name [cluster-name]
-            
-            The tool will execute any valid AWS CLI command and return the results."""
+            description="Executes AWS CLI commands to manage AWS services. Common commands: aws ec2 describe-instances, aws s3 ls, aws lambda list-functions. The tool will execute any valid AWS CLI command and return the results"
         )
         logger.info("Successfully created AWS Services Tool")
         return aws_tool
