@@ -330,6 +330,7 @@ Each tool file implements specific infrastructure operations:
 
 2. Start the frontend:
    ```bash
+   cd frontend
    streamlit run streamlit_app.py
    ```
 
