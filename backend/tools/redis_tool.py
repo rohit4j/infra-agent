@@ -100,7 +100,7 @@ class RedisTool:
                 capture_output=True,
                 text=True,
                 check=True,
-                timeout=10  # Timeout in seconds
+                timeout=60  # Timeout in seconds
             )
 
             output = result.stdout.strip()
