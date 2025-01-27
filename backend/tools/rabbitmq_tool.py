@@ -140,22 +140,6 @@ class RabbitMQTool:
             logger.error(f"Unexpected error during command execution: {str(e)}")
             return f"Unexpected error: {str(e)}"
 
-    def _make_http_request(self, method: str, url: str, data: str = None):
-        """Helper to make an HTTP request to the RabbitMQ API."""
-        headers = {"Content-Type": "application/json"}
-        auth = HTTPBasicAuth(self.username, self.password)
-
-        if method == "GET":
-            return requests.get(url, auth=auth, headers=headers)
-        elif method == "POST":
-            return requests.post(url, auth=auth, headers=headers, data=data)
-        elif method == "PUT":
-            return requests.put(url, auth=auth, headers=headers, data=data)
-        elif method == "DELETE":
-            return requests.delete(url, auth=auth, headers=headers)
-        else:
-            raise ValueError(f"Unsupported HTTP method: {method}")
-
 
 def get_rabbitmq_tool() -> Tool:
     """Create and return a RabbitMQ Tool for use with LangGraph."""
