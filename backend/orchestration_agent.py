@@ -156,7 +156,8 @@ class OrchestrationAgent:
         logger.info(f"Processing query: {query}")
         try:
             # Create initial state with the query and use memory
-            config = {"configurable": {"thread_id": "default"}}
+            config = {"configurable": {"thread_id": "default"},
+                "recursion_limit": 15}
             state = {"messages": [HumanMessage(content=query)]}
             result = await self.graph.ainvoke(state, config)
             

@@ -76,7 +76,7 @@ async def get_streaming_response(query: str) -> AsyncGenerator[str, None]:
     logger.info("-" * 50)
 
     # Configure longer timeouts
-    timeout = httpx.Timeout(30.0, connect=60.0)
+    timeout = httpx.Timeout(75.0, connect=60.0)
     async with httpx.AsyncClient(timeout=timeout) as client:
         try:
             logger.debug("Initiating streaming request to backend")
