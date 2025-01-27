@@ -39,7 +39,16 @@ def clear_input():
 logger.debug("Displaying conversation history")
 for message in st.session_state.conversation:
     if message['role'] == 'user':
-        st.markdown(f"**You:** {message['content']}")
+        st.markdown(
+    f"""
+    <div style="display: flex; justify-content: flex-end;">
+        <div style="background-color: #e6f3ff; padding: 10px; border-radius: 10px; max-width: 70%;">
+            <b>You:</b> {message['content']}
+        </div>
+    </div>
+    """, 
+    unsafe_allow_html=True
+)
     else:
         st.markdown(f"**Assistant:** {message['content']}")
 
@@ -140,4 +149,7 @@ with st.form(key="query_form", clear_on_submit=True):
                 logger.debug("Cleaning up async resources")
                 loop.close()
                 clear_input()
-                st.experimental_rerun() 
+                try:
+                    st.rerun()
+                except AttributeError:
+                    st.experimental_rerun()
