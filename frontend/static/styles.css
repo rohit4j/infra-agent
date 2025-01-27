@@ -1,0 +1,31 @@
+:root {
+    --user-bg-light: #e6f3ff;
+    --user-bg-dark: #1a73e8;
+    --user-text-light: #000000;
+    --user-text-dark: #ffffff;
+}
+
+body[data-theme="dark"] {
+    --user-bg: var(--user-bg-dark);
+    --user-text: var(--user-text-dark);
+}
+
+body[data-theme="light"] {
+    --user-bg: var(--user-bg-light);
+    --user-text: var(--user-text-light);
+}
+
+.user-message {
+    background-color: var(--user-bg);
+    color: var(--user-text);
+    padding: 10px;
+    border-radius: 10px;
+    max-width: 70%;
+    margin-bottom: 10px;
+    display: inline-block;
+}
+
+.user-container {
+    display: flex;
+    justify-content: flex-end;
+}
