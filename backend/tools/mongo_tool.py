@@ -4,6 +4,7 @@ import os
 from langchain.agents import Tool
 import logging
 from dotenv import load_dotenv
+import json
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -83,101 +84,62 @@ class MongoDBTool:
         return cmd if cmd.endswith(';') else f"{cmd};"
 
     def execute_command(self, commands: str) -> str:
-        """
-        Execute MongoDB commands in a single session with JavaScript:
-          - commands are converted from shell style to JavaScript
-          - outputs are separated by delimiters to pair each command with its output
-        """
+        """Execute mongosh commands in a single session."""
         logger.info("=" * 80)
         logger.info("MONGODB COMMAND FROM LLM:")
         logger.info("-" * 40)
         logger.info(commands)
         logger.info("-" * 40)
 
-        logger.info(f"Received commands: {commands}")
-
-        # Split incoming commands by ';' and filter out empty items
-        incoming_commands = [c.strip() for c in commands.split(';') if c.strip()]
-
-        # Convert each command to valid mongosh JavaScript
-        converted_commands = [self._convert_command(c) for c in incoming_commands]
-
-        # Build JavaScript with delimiters for just the new commands
-        js_script = "\n".join([
-            f"""
-            print('### COMMAND_START ###');
-            print('Command: {cmd}');
-            try {{
-                {cmd}
-            }} catch (e) {{
-                print('Error: ' + e);
-            }}
-            print('### COMMAND_END ###');
-            """ for cmd in converted_commands
-        ])
-
         try:
-            logger.debug(f"Executing JavaScript in mongosh:\n{js_script}")
+            # Split incoming commands by ';' and filter out empty items
+            incoming_commands = [c.strip() for c in commands.split(';') if c.strip()]
+
+            # Convert each command to valid mongosh JavaScript
+            converted_commands = [self._convert_command(c) for c in incoming_commands]
+            
+            # Join commands with semicolons
+            js_commands = '; '.join(converted_commands)
+
+            # Execute command
             result = subprocess.run(
-                [self.mongosh_path, self.mongodb_uri, '--eval', js_script],
+                [self.mongosh_path, self.mongodb_uri, '--eval', js_commands],
                 capture_output=True,
                 text=True,
                 check=True
             )
             
-            raw_output = result.stdout.strip()
-            logger.debug(f"Raw mongosh output: {raw_output}")
-
-            # Parse the raw output based on the delimiters
-            outputs = []
-            current_command = None
-            current_output = []
-
-            for line in raw_output.splitlines():
-                if line.startswith('### COMMAND_START ###'):
-                    # If we have a previous command, append its output first
-                    if current_command:
-                        outputs.append(f"{current_command}\nOutput:\n{''.join(current_output)}")
-                    current_command = None
-                    current_output = []
-                elif line.startswith('Command:'):
-                    current_command = line
-                elif line.startswith('### COMMAND_END ###'):
-                    continue
-                else:
-                    current_output.append(line + '\n')
-
-            # Finalize last block
-            if current_command:
-                outputs.append(f"{current_command}\nOutput:\n{''.join(current_output)}")
-
-            final_output = "\n\n".join(outputs)
+            output = result.stdout.strip()
+            if not output:
+                logger.warning("Command executed successfully but returned no output")
+                return "No results found"
+                
             logger.info("MONGODB RESPONSE TO LLM:")
             logger.info("-" * 40)
-            logger.info(final_output)
+            logger.info(output)
             logger.info("-" * 40)
             logger.info("=" * 80)
-            logger.info(f"Commands output: {final_output}")
-            return final_output
+            
+            return output
             
         except subprocess.CalledProcessError as e:
-            error_msg = f"Error: {e.stderr.strip() if e.stderr else str(e)}"
+            error_msg = f"Error executing MongoDB command: {e.stderr}"
             logger.error(error_msg)
             logger.info("MONGODB ERROR RESPONSE TO LLM:")
             logger.info("-" * 40)
-            logger.info(f"Error occurred during execution:\n{error_msg}")
+            logger.info(error_msg)
             logger.info("-" * 40)
             logger.info("=" * 80)
-            return f"Error occurred during execution:\n{error_msg}"
+            return error_msg
         except Exception as e:
-            error_msg = f"General Error: {str(e)}"
+            error_msg = f"Unexpected error during command execution: {str(e)}"
             logger.error(error_msg)
             logger.info("MONGODB ERROR RESPONSE TO LLM:")
             logger.info("-" * 40)
-            logger.info(f"Error occurred during execution:\n{error_msg}")
+            logger.info(error_msg)
             logger.info("-" * 40)
             logger.info("=" * 80)
-            return f"Error occurred during execution:\n{error_msg}"
+            return error_msg
 
 
 def get_mongo_tool() -> Tool:
