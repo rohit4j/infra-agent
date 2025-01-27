@@ -1,46 +1,70 @@
 import subprocess
 import shutil
 import os
-from langchain.agents import Tool
+import mysql.connector
 
+from langchain.agents import Tool
+from dotenv import load_dotenv
+from urllib.parse import urlparse
 class MariaDBTool:
     def __init__(self):
-        """Initialize the MariaDB tool with mariadb path."""
-        # Ensure we have the full system PATH
-        if os.name == 'nt':  # Windows
-            paths = os.environ.get('PATH', '').split(';')
-        else:  # Unix-like
-            paths = os.environ.get('PATH', '').split(':')
-            
-        # Update environment for subprocess calls
-        self.env = os.environ.copy()
+        # Load environment variables
+        load_dotenv()
         
-        # Find mariadb in PATH
-        self.mariadb_path = shutil.which('mariadb', path=os.environ.get('PATH'))
-        if not self.mariadb_path:
-            raise RuntimeError("MariaDB CLI not found in PATH. Please ensure MariaDB is installed and added to your system PATH.")
-            
-        # Handle paths with spaces for all platforms
-        if ' ' in self.mariadb_path:
-            self.mariadb_path = f'"{self.mariadb_path}"'
+        # Option 1: Using URI
+        uri = os.getenv('MARIADB_URI')
+        if uri:
+            parsed = urlparse(uri)
+            self.host = parsed.hostname
+            self.port = parsed.port
+            self.user = parsed.username
+            self.password = parsed.password
+            self.database = parsed.path.lstrip('/')
+        else:
+            # Option 2: Using separate variables
+            self.host = os.getenv('MARIADB_HOST', 'localhost')
+            self.port = int(os.getenv('MARIADB_PORT', '3306'))
+            self.user = os.getenv('MARIADB_USER')
+            self.password = os.getenv('MARIADB_PASSWORD')
+            self.database = os.getenv('MARIADB_DATABASE')
 
-    def execute_command(self, command: str) -> str:
-        """Execute a MariaDB command and return the output."""
+        # Test connection
+        self.test_connection()
+
+    def test_connection(self):
         try:
-            # Use list form to avoid shell injection and handle spaces in paths
-            result = subprocess.run(
-                [self.mariadb_path, '-e', command],
-                capture_output=True,
-                text=True,
-                check=True,
-                shell=False,  # Avoid shell to handle spaces better
-                env=self.env  # Use the full environment
+            conn = mysql.connector.connect(
+                host=self.host,
+                port=self.port,
+                user=self.user,
+                password=self.password,
+                    charset='utf8mb4',
+                collation='utf8mb4_general_ci'
+            
             )
-            return result.stdout.strip()
-        except subprocess.CalledProcessError as e:
-            return f"Error executing MariaDB command: {e.stderr}"
-        except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            conn.close()
+        except mysql.connector.Error as e:
+            raise ConnectionError(f"Failed to connect to MariaDB: {e}")
+
+    def execute_command(self, command):
+        try:
+            conn = mysql.connector.connect(
+                host=self.host,
+                port=self.port,
+                user=self.user,
+                password=self.password,
+                    charset='utf8mb4',
+                collation='utf8mb4_general_ci'
+        
+            )
+            cursor = conn.cursor()
+            cursor.execute(command)
+            result = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            return result
+        except mysql.connector.Error as e:
+            raise ConnectionError(f"Failed to connect to MariaDB: {e}")
 
 def get_mariadb_tool() -> Tool:
     """Create and return a MariaDB Tool for use with LangGraph."""
