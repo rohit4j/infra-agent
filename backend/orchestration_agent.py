@@ -10,7 +10,8 @@ from tools.redis_tool import get_redis_tool
 from tools.mongo_tool import get_mongo_tool
 from tools.mysql_tool import get_mysql_tool
 from tools.mariadb_tool import get_mariadb_tool
-from tools.kong_gateway_tool import get_kong_gateway_tool
+from tools.kong_gateway_tool import get_kong_tool
+from tools.docker_tool import get_docker_tool
 import os
 import asyncio
 import logging
@@ -103,7 +104,8 @@ class OrchestrationAgent:
             ('MongoDB', get_mongo_tool),
             ('MySQL', get_mysql_tool),
             ('MariaDB', get_mariadb_tool),
-            ('Kong Gateway', get_kong_gateway_tool)
+             ('Docker', get_docker_tool),
+            ('Kong Gateway', get_kong_tool)
         ]
         
         for tool_name, tool_func in tools_to_init:
